@@ -1,0 +1,25 @@
+@import url(https://fonts.googleapis.com/css?family=Ubuntu:400,300,700&subset=latin,cyrillic);
+html, body{
+    font-family: "Ubuntu" !important;
+    height: 100%;
+}
+
+#wrap {
+  min-height: 100%;
+  height: auto !important;
+  height: 100%;
+  /* Negative indent footer by its height */
+  margin: 0 auto -30px;
+  /* Pad the bottom by footer height */
+  padding: 0 0 30px;
+}
+/*Footer CSS*/
+
+footer {
+	background:#b1b0b0;
+}
+
+
+/*Copyrights CSS*/
+.copyright{background:#2c2c2c; padding:0 20px; color:#b1b0b0; font-size:12px;}
+.copyright-img{padding:20px 0;}
