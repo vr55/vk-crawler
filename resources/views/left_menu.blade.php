@@ -1,6 +1,6 @@
 @if( Sentinel::check() )
   <ul class="ca-menu">
-    <div style="text-align: center; font-size: 22px; padding-bottom: 15px">Меню</div>
+    <div class="ca-title">Меню</div>
     <li>
       <a href={{ route( 'home' ) }}>
         <div class="ca-content">
@@ -11,9 +11,7 @@
     </li>
   </ul>
   <ul class="ca-menu">
-    <div style="text-align: center; font-size: 22px; padding-bottom: 15px">Настройки
-
-    </div>
+    <div class="ca-title">Настройки</div>
     <li>
       <a href={{ route( 'settings.main' ) }}>
         <div class="ca-content">
@@ -44,7 +42,7 @@
       <a href={{ route( 'settings.invites' ) }}>
         <div class="ca-content">
           <div class="ca-main">Коды приглашения</div>
-          <div class="ca-sub">Personalized to your needs</div>
+          <div class="ca-sub">Пригласите своих друзей, отправив им персональный код</div>
         </div>
       </a>
     </li>

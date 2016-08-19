@@ -1,6 +1,8 @@
 <?php namespace Ixudra\Curl;
 
 
+use stdClass;
+
 class Builder {
 
     /** @var resource $curlObject       cURL request */
@@ -22,8 +24,10 @@ class Builder {
     /** @var array $packageOptions      Array with options that are not specific to cURL but are used by the package */
     protected $packageOptions = array(
         'data'                  => array(),
-        'asJson'                => false,
+        'asJsonRequest'         => false,
+        'asJsonResponse'        => false,
         'returnAsArray'         => false,
+        'responseObject'        => false,
         'enableDebug'           => false,
         'debugFile'             => '',
         'saveFile'              => '',
@@ -64,6 +68,16 @@ class Builder {
     }
 
     /**
+     * Allow for redirects in the request
+     *
+     * @return Builder
+     */
+    public function allowRedirect()
+    {
+        return $this->withCurlOption( 'FOLLOWLOCATION', true );
+    }
+
+    /**
      * Configure the package to encode and decode the request data
      *
      * @param   boolean $asArray    Indicates whether or not the data should be returned as an array. Default: false
@@ -71,7 +85,29 @@ class Builder {
      */
     public function asJson($asArray = false)
     {
-        return $this->withPackageOption( 'asJson', true )
+        return $this->asJsonRequest()
+            ->asJsonResponse( $asArray );
+    }
+
+    /**
+     * Configure the package to encode the request data to json before sending it to the server
+     *
+     * @return Builder
+     */
+    public function asJsonRequest()
+    {
+        return $this->withPackageOption( 'asJsonRequest', true );
+    }
+
+    /**
+     * Configure the package to decode the request data from json to object or associative array
+     *
+     * @param   boolean $asArray    Indicates whether or not the data should be returned as an array. Default: false
+     * @return Builder
+     */
+    public function asJsonResponse($asArray = false)
+    {
+        return $this->withPackageOption( 'asJsonResponse', true )
             ->withPackageOption( 'returnAsArray', $asArray );
     }
 
@@ -151,6 +187,16 @@ class Builder {
     }
 
     /**
+     * Return a full response object with HTTP status and headers instead of only the content
+     *
+     * @return Builder
+     */
+    public function returnResponseObject()
+    {
+        return $this->withPackageOption( 'responseObject', true );
+    }
+
+    /**
      * Enable debug mode for the cURL request
      *
      * @param   string $logFile    The full path to the log file you want to use
@@ -213,7 +259,7 @@ class Builder {
         $this->curlOptions[ 'POST' ] = true;
 
         $parameters = $this->packageOptions[ 'data' ];
-        if( $this->packageOptions[ 'asJson' ] ) {
+        if( $this->packageOptions[ 'asJsonRequest' ] ) {
             $parameters = json_encode($parameters);
         }
 
@@ -252,7 +298,7 @@ class Builder {
     protected function send()
     {
         // Add JSON header if necessary
-        if( $this->packageOptions[ 'asJson' ] ) {
+        if( $this->packageOptions[ 'asJsonRequest' ] ) {
             $this->withHeader( 'Content-Type: application/json' );
         }
 
@@ -268,6 +314,13 @@ class Builder {
 
         // Send the request
         $response = curl_exec( $this->curlObject );
+
+        // Capture additional request information if needed
+        $responseData = array();
+        if( $this->packageOptions[ 'responseObject' ] ) {
+            $responseData = curl_getinfo( $this->curlObject );
+        }
+
         curl_close( $this->curlObject );
 
         if( $this->packageOptions[ 'saveFile' ] ) {
@@ -275,7 +328,7 @@ class Builder {
             $file = fopen($this->packageOptions[ 'saveFile' ], 'w');
             fwrite($file, $response);
             fclose($file);
-        } else if( $this->packageOptions[ 'asJson' ] ) {
+        } else if( $this->packageOptions[ 'asJsonResponse' ] ) {
             // Decode the request if necessary
             $response = json_decode($response, $this->packageOptions[ 'returnAsArray' ]);
         }
@@ -285,7 +338,25 @@ class Builder {
         }
 
         // Return the result
-        return $response;
+        return $this->returnResponse( $response, $responseData );
+    }
+
+    /**
+     * @param   mixed $content          Content of the request
+     * @param   array $responseData     Additional response information
+     * @return stdClass
+     */
+    protected function returnResponse($content, $responseData = array())
+    {
+        if( !$this->packageOptions[ 'responseObject' ] ) {
+            return $content;
+        }
+
+        $object = new stdClass();
+        $object->content = $content;
+        $object->status = $responseData[ 'http_code' ];
+
+        return $object;
     }
 
     /**
