@@ -2,7 +2,7 @@
 /**
 *-------------------------------------------------------------------------------
 * Project Name::VK Crawler
-* mcUpdateController.php
+* @filename mcUpdateController.php
 *
 * @author Alexander Volosenkov
 * @copyright monochromatic.ru
@@ -217,63 +217,56 @@ class mcUpdateController extends mcBaseController
         return redirect()->route( 'home' )->with( 'msg', 'Обновлено' );
     }
 
-/**
-* --------------------------------------------------------------------------
-* Ищем ключевые слова в массиве элементов
-*
-* @param array $item
-* @param \App\Models\mcKeywords array $keywords
-* @return bool
-*---------------------------------------------------------------------------
-*/
-    private function analyse_data( &$item, $keywords )
+  /**
+  * ----------------------------------------------------------------------------
+  * Ищем ключевые слова в массиве элементов
+  *
+  * @param array $item
+  * @param \App\Models\mcKeywords array $keywords
+  * @see \App\Models\mcKeywords for $keywords
+  *
+  * @return bool
+  *-----------------------------------------------------------------------------
+  */
+  private function analyse_data( &$item, $keywords )
+  {
+    setlocale ( LC_ALL, 'ru_RU' );
+
+    foreach( $keywords as $word )
     {
-        setlocale ( LC_ALL, 'ru_RU' );
-
-        foreach( $keywords as $word )
-        {
-            $pattern = '/\s' . $word->keyword . '\s/i';
-            if( preg_match( $pattern, $item->text ) )
-            {
-                $item->text = preg_replace( $pattern, '<b> ' . $word->keyword . ' </b>', $item->text );
-                $word->increment( 'efficiency' );
-                return true;
-            }
-
-            //$text = str_ireplace( $word->keyword, '<b>' . $word->keyword . '</b>', $item->text, $count );
-            /*if ( stripos( $item->text, $word->keyword ) )
-                return true;*/
-            //if ( $count > 0 )
-            //{
-            //    var_dump( $text ); /*exit;*/
-            //    return true;
-            //}
-        }
-        return false;
+      $pattern = '/\s' . $word->keyword . '\s/i';
+      if( preg_match( $pattern, $item->text ) )
+      {
+        $item->text = preg_replace( $pattern, '<b> ' . $word->keyword . ' </b>', $item->text );
+        $word->increment( 'efficiency' );
+        return true;
+      }
     }
+    return false;
+  }
 
-/**
-*-------------------------------------------------------------------------------
-*
-* $var string $domain Доменное имя пользователя vk
-*
-* $return integer|0 $id Идентификатор пользователя
-*-------------------------------------------------------------------------------
-*/
-    private function get_user_id_by_domain( $domain )
-    {
-        $content = Curl::to('https://api.vk.com/method/users.get' )
-                    ->withData([ 'user_ids' => $domain, 'v' => '5.52' ] )
-                    ->withOption( 'USERAGENT', 'Mozilla/5.0 (Windows; U; Windows NT 6.1; ru-RU; rv:1.7.12) Gecko/20050919 Firefox/1.0.7' )
-                    ->get();
+  /**
+  *-------------------------------------------------------------------------------
+  *
+  * @var string $domain Доменное имя пользователя vk
+  *
+  * @return integer|0 $id Идентификатор пользователя
+  *-------------------------------------------------------------------------------
+  */
+  private function get_user_id_by_domain( $domain )
+  {
+    $content = Curl::to('https://api.vk.com/method/users.get' )
+                ->withData([ 'user_ids' => $domain, 'v' => '5.52' ] )
+                ->withOption( 'USERAGENT', 'Mozilla/5.0 (Windows; U; Windows NT 6.1; ru-RU; rv:1.7.12) Gecko/20050919 Firefox/1.0.7' )
+                ->get();
 
-        $content = json_decode( $content );
+    $content = json_decode( $content );
 
-        if ( !isset( $content ) || isset( $content->error ) )
-            return 0;
+    if ( !isset( $content ) || isset( $content->error ) )
+      return 0;
 
-        return $content->response[0]->id;
-    }
+    return $content->response[0]->id;
+  }
 /*------------------------------------------------------------------------------
 *
 *
@@ -287,38 +280,34 @@ class mcUpdateController extends mcBaseController
         return redirect()->route( 'home' )->with( 'msg', $msg );
     }
 
-/**
- *--------------------------------------------------------------------------
- * Отправляем персональное сообщение пользователю ВК
- *
- * @var vk_post $post
- *
- * @var int|null $user_id
- *
- * @return boolean
- *--------------------------------------------------------------------------
- */
+    /**
+    *--------------------------------------------------------------------------
+    * Отправляем персональное сообщение пользователю ВК
+    *
+    * @var vk_post $post
+    *
+    * @var int|null $user_id
+    *
+    * @return boolean
+    *--------------------------------------------------------------------------
+    */
     private function sendMessageToPostOwner( $post, $user_id = null )
     {
         if ( !isset( $this->settings->access_token ) && !$this->settings->send_proposal )
             return false;
 
         if( isset( $post->signer_id ) && !isset( $user_id ) )
-        {
-            $id = $post->signer_id;
-        }
+          $id = $post->signer_id;
+
         else if( isset( $post) && $post->owner_id > 0 && !isset( $user_id ) )
-        {
-            $id = $post->owner_id;
-        }
+          $id = $post->owner_id;
+
         else if( isset( $user_id ) )
-        {
-            $id = $user_id;
-        }
+          $id = $user_id;
+
         else
-        {
-            return false;
-        }
+        return false;
+
 
         $message = mcProposal::where( 'owner_id', $this->user->id )->get()->random(1);
         //$message = mcUser::find( $this->user->id )->proposals()->random(1);
@@ -340,38 +329,41 @@ class mcUpdateController extends mcBaseController
         return true;
     }
 
-/*------------------------------------------------------------------------------
-*
-*
-*
-*-------------------------------------------------------------------------------
-*/
-    public function sendMail( $items )
-    {
-        if ( $this->settings->admin_email )
-        {
-            Mail::queue( 'emails.welcome', ['items' => $items], function( \Illuminate\Mail\Message $message )
-            {
-              $message->to( $this->settings->admin_email, 'Admin' );
-              $message->subject( 'Новые сообщения' );
-              $message->from( 'admin@promo.monochromatic.ru', 'VK Crawler' );
-            });
-        }
-    }
-    /*------------------------------------------------------------------------------
+    /**
+    *-------------------------------------------------------------------------------
+    * Send email with items information to administrator
     *
-    *
-    *
+    * @var $items Items list
+    * @todo вынести в админские настройки адрес отправителя
     *-------------------------------------------------------------------------------
     */
+    public function sendMail( $items )
+    {
+      if ( $this->settings->admin_email )
+      {
+        Mail::queue( 'emails.welcome', ['items' => $items], function( \Illuminate\Mail\Message $message )
+        {
+          $message->to( $this->settings->admin_email, 'Admin' );
+          $message->subject( 'Новые сообщения' );
+          $message->from( 'admin@promo.monochromatic.ru', 'VK Crawler' );
+        });
+      }
+    }
 
+    /**
+    *---------------------------------------------------------------------------
+    *
+    *
+    *
+    *---------------------------------------------------------------------------
+    */
     private function send_xmpp_message( $text )
     {
 
         //$settings = mcSettings::firstOrFail();
 
         if ( !$this->settings->xmpp )
-            return;
+          return;
 
         $options = new Options( 'tcp://xmpp.ru:5222' );
         $options->setUsername( 'vk_crawler' )
