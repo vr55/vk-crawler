@@ -43,12 +43,12 @@ class mcUpdateController extends mcBaseController
   *-----------------------------------------------------------------------------
   * Get comunities data from vk by user id
   *
-  * @var integer $user_id
+  * @param integer $user_id
   *
-  * return mixed $data
+  * @return mixed $data
   *-----------------------------------------------------------------------------
   */
-  public function get_comunities_data( $user_id )
+  private function get_comunities_data( $user_id )
   {
     $data = array();
 
@@ -90,12 +90,100 @@ class mcUpdateController extends mcBaseController
 
     return $data;
   }
+
   /**
-  *------------------------------------------------------------------------------
+  *-----------------------------------------------------------------------------
+  *
+  * @param integer $user_id
+  * @param mcPost $data
+  *-----------------------------------------------------------------------------
+  */
+  private function process_comunities_data( &$data, $user_id )
+  {
+    /** Get user's keywords list */
+    $keywords = mcUser::find( $user_id )->keywords;
+
+    foreach( $data as $key => $item )
+    {
+      /** Check, if post already exists */
+      $post = mcPost::where( 'user_id', $user_id )->where( 'vk_id', '=', $item->id )->first();
+
+      if ( $post )
+        continue;
+
+      /** Search keywords in entire data */
+      if ( $this->analyse_data( $item, $keywords ) == false )
+      {
+        /** Unset element if keyword not found */
+        unset( $data[ $key ] );
+
+        /** Process next element */
+        continue;
+      }
+
+      /** Send message to user's xmpp messenger */
+      //$this->send_xmpp_message( 'VK Crawler::Привет::Новое объявление' . PHP_EOL . $item->owner_name . PHP_EOL . $item->text  );
+
+      $item->text = $this->format_html( $item->text );
+
+      $item->user_id = $user_id;
+      $this->create_post_from_comunity_data( $item );
+
+    }
+
+  }
+
+  /**
+  *-----------------------------------------------------------------------------
+  * Format HTML from entire text
+  *
+  * @param string $text
+  *
+  * @return string $text
+  *-----------------------------------------------------------------------------
+  */
+  private function format_html( $text )
+  {
+    //replace http://vk.com/id12356 на кликабельную ссылку
+    $text = preg_replace( '/(http\S*)/', '<br><a href=$1>$1</a>' , $text );
+
+    //replace [id123456|имя] на ссылку на профиль
+    $text = preg_replace( '/\[(id[\d]*)\|(\S.*)\]/', '<a target="_blank" href="https://vk.com/$1">$2</a>', $text );
+
+    $text = str_replace(array( "\r\n", "\r", "\n" ), "<br />", $text );
+
+    return $text;
+  }
+
+  /**
+  *-----------------------------------------------------------------------------
+  *
+  * @param vk_response $data
+  *
+  *-----------------------------------------------------------------------------
+  */
+  private function create_post_from_comunity_data( $data )
+  {
+    $post = new mcPost();
+    $post->vk_id = $data->id;
+    $post->owner_id = $data->owner_id;
+    $post->from_id = $data->from_id;
+    $post->signer_id = isset( $data->signer_id ) ? $data->signer_id : false;
+    $post->text = $data->text;
+    $post->date = $data->date;
+    $post->owner_name = $data->owner_name;
+    $post->user_id = $data->user_id;
+
+    print_r( $post );
+    //$post->save();
+  }
+
+  /**
+  *-----------------------------------------------------------------------------
   *
   *
   *
-  *-------------------------------------------------------------------------------
+  *-----------------------------------------------------------------------------
   */
     public function getData( )
     {
@@ -131,7 +219,9 @@ class mcUpdateController extends mcBaseController
         }
 */
       $data = $this->get_comunities_data( $this->user->id );
+      $this->process_comunities_data( $data, $this->user->id );
 
+exit;
         $posts = array();
         foreach( $data as $item )
         {
@@ -147,7 +237,7 @@ class mcUpdateController extends mcBaseController
             /** Отправляем сообщение в мессенджер */
           //  $this->send_xmpp_message( 'VK Crawler::Привет::Новое объявление' . PHP_EOL . $item->owner_name . PHP_EOL . $item->text  );
 
-            if( $item->owner_id < 0 && !isset( $item->signer_id ) )
+          /*  if( $item->owner_id < 0 && !isset( $item->signer_id ) )
             {
                 //пытаемся найти в тексте ссылку на автора
                 $c = preg_match_all( '/https?:\/\/vk.com\/(?!wall|topic)\S+/', $item->text , $matches );
@@ -157,7 +247,7 @@ class mcUpdateController extends mcBaseController
                     $item->signer_id = $this->get_user_id_by_domain( $domain );
                 }
             }
-
+            */
             $item->text = str_replace(array( "\r\n", "\r", "\n" ), "<br />", $item->text );
 
             /** добавляем перенос строки перед элементом нумерованного списка */
@@ -221,7 +311,7 @@ class mcUpdateController extends mcBaseController
   * ----------------------------------------------------------------------------
   * Ищем ключевые слова в массиве элементов
   *
-  * @param array $item
+  * @param mixed $item
   * @param \App\Models\mcKeywords array $keywords
   * @see \App\Models\mcKeywords for $keywords
   *
@@ -235,10 +325,16 @@ class mcUpdateController extends mcBaseController
     foreach( $keywords as $word )
     {
       $pattern = '/\s' . $word->keyword . '\s/i';
+
+      /** Search pattern in entire text */
       if( preg_match( $pattern, $item->text ) )
       {
+        /** Bold searched pattern */
         $item->text = preg_replace( $pattern, '<b> ' . $word->keyword . ' </b>', $item->text );
+
+        /** Increase keyword efficiency by one */
         $word->increment( 'efficiency' );
+
         return true;
       }
     }
