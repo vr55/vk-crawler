@@ -64,6 +64,13 @@
     transition: all 300ms linear;
     padding-top: 5px;
 }
+.ca-title{
+  text-align: center;
+  font-size: 22px;
+  padding-bottom: 15px;
+  padding-top: 15px;
+  background-color: rgb(245,245,245);
+}
 .ca-menu li:hover{
     background: #e1f0fa;
 }

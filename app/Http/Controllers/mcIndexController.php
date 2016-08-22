@@ -34,7 +34,8 @@ class mcIndexController extends mcBaseController
         return view( 'index', ['posts' => $posts] );
     }
 
-/*------------------------------------------------------------------------------
+/**
+*-------------------------------------------------------------------------------
 *
 *
 *
@@ -46,7 +47,8 @@ class mcIndexController extends mcBaseController
         return view( 'keywords', ['keywords' => $keywords] );
     }
 
-/**-----------------------------------------------------------------------------
+/**
+ *------------------------------------------------------------------------------
  *
  * Save keyword to database
  *
@@ -68,11 +70,11 @@ class mcIndexController extends mcBaseController
     }
 
 /**
-  *
   *-----------------------------------------------------------------------------
   *
-  *
+  * Remove keyword from database by id
   * @see /App/Http/Controllers/BaseController $this->user
+  *
   *-----------------------------------------------------------------------------
 */
     public function getDeleteKeyword( Request $request, $id )
@@ -85,7 +87,8 @@ class mcIndexController extends mcBaseController
         return redirect()->route( 'keywords' )->with( 'msg', 'Удалено' );
     }
 
-/*------------------------------------------------------------------------------
+/**
+*-------------------------------------------------------------------------------
 *
 *
 *
@@ -93,36 +96,45 @@ class mcIndexController extends mcBaseController
 */
     public function getComunities()
     {
-        //$comunities = mcComunities::paginate(15);
-        $comunities = mcUser::find( $this->user->id )->comunities()->orderBy( 'id' )->paginate( 15 );
-        return view( 'comunities', ['comunities' => $comunities] );
+      $comunities = mcUser::find( $this->user->id )->comunities()->orderBy( 'id' )->paginate( 15 );
+      return view( 'comunities', ['comunities' => $comunities] );
     }
 
-/*------------------------------------------------------------------------------
+/**
+*-------------------------------------------------------------------------------
 *
-*
+* Add new vk comunity url to databse
 *
 *-------------------------------------------------------------------------------
 */
     public function postComunities( Request $request )
     {
-        $this->validate( $request, [
-                'url' => 'required|url'
-                ]);
-        //Вытаскиваем имя сообщества
-        $name = str_replace( 'https://vk.com/', '', $request->input( 'url' ) );
+      // get comunities count
+      $cnt = mcUser::find( $this->user->id )->comunities()->count();
 
-        $content = Curl::to('https://api.vk.com/method/groups.getById' )
-                    ->withData([ 'group_id' => $name, 'v' => '5.52' ] )
-                    ->withOption('USERAGENT', 'Mozilla/5.0 (Windows; U; Windows NT 6.1; ru-RU; rv:1.7.12) Gecko/20050919 Firefox/1.0.7' )
-                    ->get();
-        $content = json_decode( $content );
+      // return if count more than 10
+      if ( $cnt > 10 )
+        return redirect()->back()->with( 'msg', 'Вы не можете добавить более 10 сообществ' );
 
-        if ( !isset( $content->error ) )
-        {
-            $name = $content->response[0]->name;
-        }
+      $this->validate( $request, [
+              'url' => 'required|url'
+              ]);
 
+      // get comunity name using vk api
+      $name = str_replace( 'https://vk.com/', '', $request->input( 'url' ) );
+
+      $content = Curl::to('https://api.vk.com/method/groups.getById' )
+                  ->withData([ 'group_id' => $name, 'v' => '5.52' ] )
+                  ->withOption('USERAGENT', 'Mozilla/5.0 (Windows; U; Windows NT 6.1; ru-RU; rv:1.7.12) Gecko/20050919 Firefox/1.0.7' )
+                  ->get();
+      $content = json_decode( $content );
+
+      if ( isset( $content->error ) )
+        return redirect()->back()->with( 'msg', 'Ошибка. Невозможно получить имя сообщества' );
+
+      else
+      {
+        $name = $content->response[0]->name;
         $comunitie = new mcComunities();
         $comunitie->url = $request->input( 'url' );
         $comunitie->name = $name;
@@ -131,22 +143,29 @@ class mcIndexController extends mcBaseController
         $comunitie->save();
 
         return redirect()->back()->with( 'msg', 'Добавлено' );
+      }
     }
 
-/*------------------------------------------------------------------------------
+/**
+*-------------------------------------------------------------------------------
 *
-*
+* Delete comunity from database
 *
 *-------------------------------------------------------------------------------
 */
     public function getDeleteComunity( Request $request, $id )
     {
-        //$comunity = mcComunities::find( $id );
-        $comunity = mcComunities::where( 'id', $id )->where( 'owner_id', $this->user->id );
-        if ( $comunity )
-            $comunity->delete();
-
+      $comunity = mcComunities::where( 'id', $id )->where( 'owner_id', $this->user->id );
+      
+      if ( $comunity )
+      {
+        $comunity->delete();
         return redirect( 'comunities' )->with( 'msg', 'Удалено' );
+      }
+      else
+      {
+        return redirect( 'comunities' )->with( 'msg', 'Ошибка при удалении' );
+      }
     }
 
 /*------------------------------------------------------------------------------
