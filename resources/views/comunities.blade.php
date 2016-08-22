@@ -21,7 +21,7 @@
       <table class="table table-hover">
         <thead>
             <th>
-                id
+                #
             </th>
             <th>
                 url
@@ -34,22 +34,24 @@
             </th>
         </thead>
         <tbody>
+          <?php $i = 0; ?>
             @foreach( $comunities as $comunity )
                 <tr>
-                    <td>
-                        {{ $comunity->id }}
-                    </td>
-                    <td>
-                        <div>{{ $comunity->name }}</div>
-                        <a style="font-size: 11px" href="{{ $comunity->url }}">{{ $comunity->url }}</a>
-                    </td>
-                    <td>
-                        <span class="badge">{{ $comunity->efficiency }}</span>
-                    </td>
-                    <td>
-                        <a href={{ route( 'comunity.delete', $comunity->id ) }} class="btn btn-danger btn-xs">удалить</a>
-                    </td>
+                  <td>
+                    {{ $i }}
+                  </td>
+                  <td>
+                    <div>{{ $comunity->name }}</div>
+                    <a style="font-size: 11px" href="{{ $comunity->url }}">{{ $comunity->url }}</a>
+                  </td>
+                  <td>
+                    <span class="badge">{{ $comunity->efficiency }}</span>
+                  </td>
+                  <td>
+                    <a href={{ route( 'comunity.delete', $comunity->id ) }} class="btn btn-danger btn-xs">удалить</a>
+                  </td>
                 </tr>
+                <?php $i++ ?>
             @endforeach
         </tbody>
       </table>

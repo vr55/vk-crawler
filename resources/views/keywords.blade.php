@@ -21,35 +21,37 @@
       <table class="table table-hover">
         <thead>
             <th>
-                id
+              #
             </th>
             <th>
-                url
+              ключ
             </th>
             <th>
-                эффективность
+              эффективность
             </th>
             <th>
                 действие
             </th>
         </thead>
         <tbody>
-            @foreach( $keywords as $word )
-              <tr>
-                <td>
-                    {{ $word->id }}
-                </td>
-                <td>
-                    {{ $word->keyword }}
-                </td>
-                <td>
-                    <span class="badge">{{ $word->efficiency }}</span>
-                </td>
-                <td>
-                    <a href={{ route( 'keyword.delete', $word->id ) }} class="btn btn-danger btn-xs">удалить</a>
-                </td>
-              </tr>
-            @endforeach
+          <?php $i = 0 ?>
+          @foreach( $keywords as $word )
+            <tr>
+              <td>
+                {{ $i }}
+              </td>
+              <td>
+                {{ $word->keyword }}
+              </td>
+              <td>
+                <span class="badge">{{ $word->efficiency }}</span>
+              </td>
+              <td>
+                <a href={{ route( 'keyword.delete', $word->id ) }} class="btn btn-danger btn-xs">удалить</a>
+              </td>
+            </tr>
+            <?php $i++ ?>
+          @endforeach
         </tbody>
       </table>
     </div>

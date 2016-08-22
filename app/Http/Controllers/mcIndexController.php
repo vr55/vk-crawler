@@ -42,7 +42,7 @@ class mcIndexController extends mcBaseController
 */
     public function getKeywords()
     {
-        $keywords = mcUser::find( $this->user->id )->keywords()->orderBy( 'id', 'desc' )->paginate(15);
+        $keywords = mcUser::find( $this->user->id )->keywords()->orderBy( 'id', 'desc' )->paginate(30);
         return view( 'keywords', ['keywords' => $keywords] );
     }
 

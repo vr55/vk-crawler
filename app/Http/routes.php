@@ -64,9 +64,11 @@ Route::group( [ 'middleware' => 'sentinel.auth'], function () {
 	Route::get( 'xmpp', ['as' =>'xmpp', 'uses' => 'mcXmppController@getSendMessage'] );
 
 //	Route::post( 'invites', ['uses' => 'mcUserController@postInvites'] );
-
+	Route::get( 'schedule', ['as' =>'schedule', 'uses' => 'mcScheduleController@do_schedule_job'] );
 });
 	Route::get( 'update', ['as' =>'update', 'uses' => 'mcUpdateController@getData'] );
+
+
 
 //	Route::get( 'xmpp', ['uses' => 'mcXmppController@getSendMessage'] );
 //Route::get( 'mail', ['uses' => 'mcUpdateController@sendMail']);
