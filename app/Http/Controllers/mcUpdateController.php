@@ -39,29 +39,75 @@ class mcUpdateController extends mcBaseController
           'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0'
     );
 
+  /**
+  *-----------------------------------------------------------------------------
+  * Get comunities data from vk by user id
+  *
+  * @var integer $user_id
+  *
+  * return mixed $data
+  *-----------------------------------------------------------------------------
+  */
+  public function get_comunities_data( $user_id )
+  {
+    $data = array();
 
-/*------------------------------------------------------------------------------
-*
-*
-*
-*-------------------------------------------------------------------------------
-*/
+    /** Get user's communities list */
+    $comunities = mcUser::find( $user_id )->comunities;
+
+    /** Get personal user settings */
+    $settings = mcUser::find( $user_id )->settings;
+
+    foreach ( $comunities as $key => $comunity )
+    {
+      /** Clean up community url */
+      $comunity->url = str_replace( 'https://vk.com/', '', $comunity->url );
+
+      /** Get community data from vk */
+      $content = Curl::to( 'http://api.vk.com/method/wall.get' )
+                  ->withData([ 'domain' => $comunity->url, 'v' => '5.52', 'count' => $settings->scan_depth ] )
+                  ->withOption( 'USERAGENT', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0' )
+                  ->get();
+
+      $content = json_decode( $content );
+
+      /** Check for errors */
+      if ( !isset( $content ) || isset( $content->error ) )
+        continue;
+
+      foreach( $content->response->items as $item )
+      {
+        if ( !isset( $item->is_pinned ) )
+        {
+          $item->owner_name = $comunity->name;
+          $item->comunity_id = $comunity->id;
+          array_push( $data, $item );
+        }
+      }
+
+      usleep( rand( 20000, 100000 ) );
+    }
+
+    return $data;
+  }
+  /**
+  *------------------------------------------------------------------------------
+  *
+  *
+  *
+  *-------------------------------------------------------------------------------
+  */
     public function getData( )
     {
         $comunities = mcUser::find( $this->user->id )->comunities;
         $keywords = mcUser::find( $this->user->id )->keywords;
 
         $data = array();
-//Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36
-//Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36
-//Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0
 
         /** Перебираем все сообщества */
-        foreach ( $comunities as $key => $comunity )
+      /*  foreach ( $comunities as $key => $comunity )
         {
             $comunity->url = str_replace( 'https://vk.com/', '', $comunity->url );
-
-            /** Получаем записи из сообщества через vk api */
             $content = Curl::to('https://api.vk.com/method/wall.get' )
                         ->withData([ 'domain' => $comunity->url, 'v' => '5.52', 'count' => $this->settings->scan_depth ] )
                         ->withOption( 'USERAGENT', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0' )
@@ -83,6 +129,8 @@ class mcUpdateController extends mcBaseController
 
             usleep( rand( 500000, 2000000 ) );
         }
+*/
+      $data = $this->get_comunities_data( $this->user->id );
 
         $posts = array();
         foreach( $data as $item )
@@ -97,7 +145,7 @@ class mcUpdateController extends mcBaseController
                 continue;
 
             /** Отправляем сообщение в мессенджер */
-            $this->send_xmpp_message( 'VK Crawler::Привет::Новое объявление' . PHP_EOL . $item->owner_name . PHP_EOL . $item->text  );
+          //  $this->send_xmpp_message( 'VK Crawler::Привет::Новое объявление' . PHP_EOL . $item->owner_name . PHP_EOL . $item->text  );
 
             if( $item->owner_id < 0 && !isset( $item->signer_id ) )
             {
@@ -110,17 +158,23 @@ class mcUpdateController extends mcBaseController
                 }
             }
 
+            $item->text = str_replace(array( "\r\n", "\r", "\n" ), "<br />", $item->text );
+
             /** добавляем перенос строки перед элементом нумерованного списка */
-            $item->text = preg_replace( '/(\d\.)[^\d]/', '<br>$1', $item->text );
+            //$item->text = preg_replace( '/(\d\.)[^\d]/', '<br>$1', $item->text );
 
             //добавляем перенос строки перед хэш тэгом
-            $item->text = preg_replace( '/(#\S*)/', '<br>$1', $item->text );
+            //$item->text = preg_replace( '/(#\S*)/', '<br>$1', $item->text );
 
             //replace http://vk.com/id12356 на кликабельную ссылку
             $item->text = preg_replace( '/(http\S*)/', '<br><a href=$1>$1</a>' , $item->text );
 
             //replace [id123456|имя] на ссылку на профиль
             $item->text = preg_replace( '/\[(id[\d]*)\|(\S.*)\]/', '<a target="_blank" href="https://vk.com/$1">$2</a>', $item->text );
+
+            //print_r( $item->text );
+            echo $item->text;
+            exit;
 
 
 /*
