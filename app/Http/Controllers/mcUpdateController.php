@@ -92,12 +92,12 @@ class mcUpdateController extends mcBaseController
   }
 
   /**
-  *-----------------------------------------------------------------------------
-  *
-  * @param integer $user_id
-  * @param mcPost $data
-  *-----------------------------------------------------------------------------
-  */
+   *----------------------------------------------------------------------------
+   *
+   * @param integer $user_id
+   * @param mcPost $data
+   *----------------------------------------------------------------------------
+   */
   public function process_comunities_data( &$data, $user_id )
   {
     $posts = array();
@@ -144,14 +144,14 @@ class mcUpdateController extends mcBaseController
   }
 
   /**
-  *-----------------------------------------------------------------------------
-  * Format HTML from entire text
-  *
-  * @param string $text
-  *
-  * @return string $text
-  *-----------------------------------------------------------------------------
-  */
+   *----------------------------------------------------------------------------
+   * Format HTML from entire text
+   *
+   * @param string $text
+   *
+   * @return string $text
+   *----------------------------------------------------------------------------
+   */
   private function format_html( $text )
   {
     //replace http://vk.com/id12356 на кликабельную ссылку
