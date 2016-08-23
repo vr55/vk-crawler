@@ -18,6 +18,16 @@
                 </td>
             </tr>
             <tr>
+              <td>
+                {{ Form::label( 'Отправлять на электронную почту?' ) }}
+                <div style="font-size:10px; color: #777777; width:250px">включить отправку информации на электронную почту</div>
+              </td>
+              <td>
+
+                {{ Form::checkbox( 'send_email', '0' ) }}
+              </td>
+            </tr>
+            <tr>
                 <td>
                     {{ Form::label( 'email администратора' ) }} <span style="font-size: 10px; font-weight: 300"><a href="#">проверить</a></span>
                     <div style="font-size:10px; color: #777777; width:250px">на этот email будет отправляться вся информация</div>
@@ -25,6 +35,17 @@
                 <td>
                     {{ Form::text( 'admin_email', null ) }}
                 </td>
+            </tr>
+
+            <tr>
+              <td>
+                {{ Form::label( 'Отправлять на xmpp/jabber?' ) }}
+                <div style="font-size:10px; color: #777777; width:250px">включить отправку информации на xmpp/jabber месенджер</div>
+              </td>
+              <td>
+
+                {{ Form::checkbox( 'send_xmpp', '0' ) }}
+              </td>
             </tr>
 
             <tr>

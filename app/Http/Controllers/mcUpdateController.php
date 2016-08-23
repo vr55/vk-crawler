@@ -48,7 +48,7 @@ class mcUpdateController extends mcBaseController
   * @return mixed $data
   *-----------------------------------------------------------------------------
   */
-  private function get_comunities_data( $user_id )
+  public function get_comunities_data( $user_id )
   {
     $data = array();
 
@@ -98,8 +98,10 @@ class mcUpdateController extends mcBaseController
   * @param mcPost $data
   *-----------------------------------------------------------------------------
   */
-  private function process_comunities_data( &$data, $user_id )
+  public function process_comunities_data( &$data, $user_id )
   {
+    $posts = array();
+
     /** Get user's keywords list */
     $keywords = mcUser::find( $user_id )->keywords;
 
@@ -127,10 +129,18 @@ class mcUpdateController extends mcBaseController
       $item->text = $this->format_html( $item->text );
 
       $item->user_id = $user_id;
-      $this->create_post_from_comunity_data( $item );
+      $post = $this->create_post_from_comunity_data( $item );
+
+      //print_r( $post );
+      $post->save();
+
+      array_push( $posts, $post );
+
+      /** Increase efficiency counter */
+      mcUser::find( $user_id )->comunities()->where( 'id', $item->comunity_id )->where( 'owner_id', $user_id )->increment( 'efficiency' );
 
     }
-
+    return $posts;
   }
 
   /**
@@ -160,6 +170,7 @@ class mcUpdateController extends mcBaseController
   *
   * @param vk_response $data
   *
+  * @return mcPost $post
   *-----------------------------------------------------------------------------
   */
   private function create_post_from_comunity_data( $data )
@@ -174,8 +185,7 @@ class mcUpdateController extends mcBaseController
     $post->owner_name = $data->owner_name;
     $post->user_id = $data->user_id;
 
-    print_r( $post );
-    //$post->save();
+    return $post;
   }
 
   /**
@@ -187,124 +197,13 @@ class mcUpdateController extends mcBaseController
   */
     public function getData( )
     {
-        $comunities = mcUser::find( $this->user->id )->comunities;
-        $keywords = mcUser::find( $this->user->id )->keywords;
+      $data = array();
 
-        $data = array();
-
-        /** Перебираем все сообщества */
-      /*  foreach ( $comunities as $key => $comunity )
-        {
-            $comunity->url = str_replace( 'https://vk.com/', '', $comunity->url );
-            $content = Curl::to('https://api.vk.com/method/wall.get' )
-                        ->withData([ 'domain' => $comunity->url, 'v' => '5.52', 'count' => $this->settings->scan_depth ] )
-                        ->withOption( 'USERAGENT', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0' )
-                        ->get();
-
-            $content = json_decode( $content );
-            if ( !isset( $content ) || isset( $content->error ) )
-                continue;
-
-            foreach( $content->response->items as $item )
-            {
-                if ( !isset( $item->is_pinned ) )
-                {
-                    $item->owner_name = $comunity->name;
-                    $item->comunity_id = $comunity->id;
-                    array_push( $data, $item );
-                }
-            }
-
-            usleep( rand( 500000, 2000000 ) );
-        }
-*/
       $data = $this->get_comunities_data( $this->user->id );
-      $this->process_comunities_data( $data, $this->user->id );
+      $posts = $this->process_comunities_data( $data, $this->user->id );
+      $this->sendMail( $posts );
+      return redirect()->route( 'home' )->with( 'msg', 'Обновлено' );
 
-exit;
-        $posts = array();
-        foreach( $data as $item )
-        {
-            $post = mcPost::where( 'user_id', $this->user->id )->where( 'vk_id', '=', $item->id )->first();
-
-            /** Пост уже обработали, он находится в базе, пропускаем его */
-            if ( $post )
-                continue;
-
-            if ( $this->analyse_data( $item, $keywords ) == false )
-                continue;
-
-            /** Отправляем сообщение в мессенджер */
-          //  $this->send_xmpp_message( 'VK Crawler::Привет::Новое объявление' . PHP_EOL . $item->owner_name . PHP_EOL . $item->text  );
-
-          /*  if( $item->owner_id < 0 && !isset( $item->signer_id ) )
-            {
-                //пытаемся найти в тексте ссылку на автора
-                $c = preg_match_all( '/https?:\/\/vk.com\/(?!wall|topic)\S+/', $item->text , $matches );
-                if( $c == 1 )
-                {
-                    $domain = preg_replace( '/(https:\/\/vk.com\/)/', '', $matches[0][0] );
-                    $item->signer_id = $this->get_user_id_by_domain( $domain );
-                }
-            }
-            */
-            $item->text = str_replace(array( "\r\n", "\r", "\n" ), "<br />", $item->text );
-
-            /** добавляем перенос строки перед элементом нумерованного списка */
-            //$item->text = preg_replace( '/(\d\.)[^\d]/', '<br>$1', $item->text );
-
-            //добавляем перенос строки перед хэш тэгом
-            //$item->text = preg_replace( '/(#\S*)/', '<br>$1', $item->text );
-
-            //replace http://vk.com/id12356 на кликабельную ссылку
-            $item->text = preg_replace( '/(http\S*)/', '<br><a href=$1>$1</a>' , $item->text );
-
-            //replace [id123456|имя] на ссылку на профиль
-            $item->text = preg_replace( '/\[(id[\d]*)\|(\S.*)\]/', '<a target="_blank" href="https://vk.com/$1">$2</a>', $item->text );
-
-            //print_r( $item->text );
-            echo $item->text;
-            exit;
-
-
-/*
-            $post_type = $item->post_type;
-            $comments = $item->comments;
-*/
-            $post = new mcPost();
-            $post->vk_id = $item->id;
-            $post->owner_id = $item->owner_id;
-            $post->from_id = $item->from_id;
-            $post->signer_id = isset( $item->signer_id ) ? $item->signer_id : false;
-            $post->text = $item->text;
-            $post->date = $item->date;
-            $post->owner_name = $item->owner_name;
-            $post->user_id = $this->user->id;
-
-            //отправляем персональные сообщения
-            /*
-            if( $this->settings->send_proposal )
-            {
-                $sent = $this->sendMessageToPostOwner( $post );
-
-                if ( isset( $sent ) )
-                    $post->sent = true;
-            }
-            */
-
-            $post->save();
-            array_push( $posts, $post );
-
-            /** Увеличиваем счетчик эффективности на 1 */
-            //mcComunities::find( $item->comunity_id )->increment('efficiency');
-            mcUser::find( $this->user->id )->comunities()->where( 'id', $item->comunity_id )->where( 'owner_id', $this->user->id )->increment( 'efficiency' );
-
-        }
-
-        //отправляем email администратору со всей информацией
-        $this->sendMail( $posts );
-
-        return redirect()->route( 'home' )->with( 'msg', 'Обновлено' );
     }
 
   /**
