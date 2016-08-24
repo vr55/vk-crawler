@@ -37,7 +37,7 @@ class mcScheduleController extends mcBaseController
       $update = new mcUpdateController();
 
 
-      $data = $update->get_comunities_data( $user->id );
+      $data = $update->get_comunities_data( $user );
 
       $posts = $update->process_comunities_data( $data, $user->id );
       //$update->sendMail( $posts );
@@ -63,13 +63,32 @@ class mcScheduleController extends mcBaseController
 
      foreach( $user_ids as $id )
      {
+       /** @var \App\Models\mcUsers $user */
        $user = $id->user;
-       $data = $update->get_comunities_data( $user->id );
-       $posts = $update->process_comunities_data( $data, $user->id );
+       $data = $update->get_comunities_data( $user );
+       $posts = $update->process_comunities_data( $data, $user );
        //$update->sendMail( $posts );
      }
 
    }
 
+   public function do_15min_schedule_job()
+   {
+     $update = new mcUpdateController();
+
+     //TODO:: Better use join here
+     /** Get users, who set scan frequency to 15 minute in setting */
+     $user_ids = mcSettings::where( 'scan_freq', '2' )->get();
+
+     foreach( $user_ids as $id )
+     {
+       /** @var \App\Models\mcUsers $user */
+       $user = $id->user;
+       $data = $update->get_comunities_data( $user );
+       $posts = $update->process_comunities_data( $data, $user );
+       //$update->sendMail( $posts );
+     }
+
+   }
 
 }

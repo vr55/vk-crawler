@@ -43,20 +43,20 @@ class mcUpdateController extends mcBaseController
   *-----------------------------------------------------------------------------
   * Get comunities data from vk by user id
   *
-  * @param integer $user_id
+  * @param \App\Models\mcUsers $user
   *
   * @return mixed $data
   *-----------------------------------------------------------------------------
   */
-  public function get_comunities_data( $user_id )
+  public function get_comunities_data( $user )
   {
     $data = array();
 
     /** Get user's communities list */
-    $comunities = mcUser::find( $user_id )->comunities;
+    $comunities = $user->comunities;
 
     /** Get personal user settings */
-    $settings = mcUser::find( $user_id )->settings;
+    $settings = $user->settings;
 
     foreach ( $comunities as $key => $comunity )
     {
@@ -75,17 +75,22 @@ class mcUpdateController extends mcBaseController
       if ( !isset( $content ) || isset( $content->error ) )
         continue;
 
-      foreach( $content->response->items as $item )
+      foreach( $content->response->items as $key => $item )
       {
-        if ( !isset( $item->is_pinned ) )
+        /** We don't need pinned posts */
+        if ( isset( $item->is_pinned ) )
         {
-          $item->owner_name = $comunity->name;
-          $item->comunity_id = $comunity->id;
-          array_push( $data, $item );
+          unset( $item );
+          continue;
         }
+
+        $item->owner_name = $comunity->name;
+        $item->comunity_id = $comunity->id;
       }
 
-      usleep( rand( 20000, 100000 ) );
+      $data = array_merge( $data, $content->response->items );
+
+      //usleep( rand( 20000, 100000 ) );
     }
 
     return $data;
@@ -94,27 +99,28 @@ class mcUpdateController extends mcBaseController
   /**
    *----------------------------------------------------------------------------
    *
-   * @param integer $user_id
-   * @param mcPost $data
+   * @param \App\Models\mcUsers $user
+   * @param mixed $data
    *----------------------------------------------------------------------------
    */
-  public function process_comunities_data( &$data, $user_id )
+  public function process_comunities_data( $data, $user )
   {
     $posts = array();
 
     /** Get user's keywords list */
-    $keywords = mcUser::find( $user_id )->keywords;
+    $keywords = $user->keywords;
 
     foreach( $data as $key => $item )
     {
       /** Check, if post already exists */
-      $post = mcPost::where( 'user_id', $user_id )->where( 'vk_id', '=', $item->id )->first();
+      $post = mcPost::where( 'user_id', $user->id )->where( 'vk_id', '=', $item->id )->first();
 
       if ( $post )
         continue;
 
       /** Search keywords in entire data */
-      if ( $this->analyse_data( $item, $keywords ) == false )
+      $item->text = $this->search_for_keywords( $item->text, $keywords );
+      if ( $item->text == null )
       {
         /** Unset element if keyword not found */
         unset( $data[ $key ] );
@@ -128,7 +134,7 @@ class mcUpdateController extends mcBaseController
 
       $item->text = $this->format_html( $item->text );
 
-      $item->user_id = $user_id;
+      $item->user_id = $user->id;
       $post = $this->create_post_from_comunity_data( $item );
 
       //print_r( $post );
@@ -137,7 +143,7 @@ class mcUpdateController extends mcBaseController
       array_push( $posts, $post );
 
       /** Increase efficiency counter */
-      mcUser::find( $user_id )->comunities()->where( 'id', $item->comunity_id )->where( 'owner_id', $user_id )->increment( 'efficiency' );
+      $user->comunities()->where( 'id', $item->comunity_id )->where( 'owner_id', $user->id )->increment( 'efficiency' );
 
     }
     return $posts;
@@ -170,7 +176,7 @@ class mcUpdateController extends mcBaseController
   *
   * @param vk_response $data
   *
-  * @return mcPost $post
+  * @return \App\Models\mcPost $post
   *-----------------------------------------------------------------------------
   */
   private function create_post_from_comunity_data( $data )
@@ -199,9 +205,9 @@ class mcUpdateController extends mcBaseController
     {
       $data = array();
 
-      $data = $this->get_comunities_data( $this->user->id );
-      $posts = $this->process_comunities_data( $data, $this->user->id );
-      $this->sendMail( $posts );
+      $data = $this->get_comunities_data( mcUser::find( $this->user->id ) );
+      $posts = $this->process_comunities_data( $data, mcUser::find( $this->user->id ) );
+      //$this->sendMail( $posts );
       return redirect()->route( 'home' )->with( 'msg', 'Обновлено' );
 
     }
@@ -210,34 +216,34 @@ class mcUpdateController extends mcBaseController
   * ----------------------------------------------------------------------------
   * Ищем ключевые слова в массиве элементов
   *
-  * @param mixed $item
+  * @param string $text
   * @param \App\Models\mcKeywords array $keywords
   * @see \App\Models\mcKeywords for $keywords
   *
-  * @return bool
+  * @return string or null
   *-----------------------------------------------------------------------------
   */
-  private function analyse_data( &$item, $keywords )
+  private function search_for_keywords( $text, $keywords )
   {
     setlocale ( LC_ALL, 'ru_RU' );
+
+    $result = null;
 
     foreach( $keywords as $word )
     {
       $pattern = '/\s' . $word->keyword . '\s/i';
 
       /** Search pattern in entire text */
-      if( preg_match( $pattern, $item->text ) )
+      if( preg_match( $pattern, $text ) )
       {
         /** Bold searched pattern */
-        $item->text = preg_replace( $pattern, '<b> ' . $word->keyword . ' </b>', $item->text );
+        $result = preg_replace( $pattern, '<b> ' . $word->keyword . ' </b>', $text );
 
         /** Increase keyword efficiency by one */
         $word->increment( 'efficiency' );
-
-        return true;
       }
     }
-    return false;
+    return $result;
   }
 
   /**
