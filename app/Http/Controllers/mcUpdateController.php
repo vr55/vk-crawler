@@ -130,7 +130,7 @@ class mcUpdateController extends mcBaseController
       }
 
       /** Send message to user's xmpp messenger */
-      //$this->send_xmpp_message( 'VK Crawler::Привет::Новое объявление' . PHP_EOL . $item->owner_name . PHP_EOL . $item->text  );
+      $this->send_xmpp_message( 'VK Crawler::Привет::Новое объявление' . PHP_EOL . $item->owner_name . PHP_EOL . $item->text, $user  );
 
       $item->text = $this->format_html( $item->text );
 
@@ -207,7 +207,7 @@ class mcUpdateController extends mcBaseController
 
       $data = $this->get_comunities_data( mcUser::find( $this->user->id ) );
       $posts = $this->process_comunities_data( $data, mcUser::find( $this->user->id ) );
-      //$this->sendMail( $posts );
+      $this->sendMail( $posts, mcUser::find( $this->user->id ) );
       return redirect()->route( 'home' )->with( 'msg', 'Обновлено' );
 
     }
@@ -249,7 +249,7 @@ class mcUpdateController extends mcBaseController
   /**
   *-------------------------------------------------------------------------------
   *
-  * @var string $domain Доменное имя пользователя vk
+  * @string string $domain Доменное имя пользователя vk
   *
   * @return integer|0 $id Идентификатор пользователя
   *-------------------------------------------------------------------------------
@@ -335,72 +335,63 @@ class mcUpdateController extends mcBaseController
     * Send email with items information to administrator
     *
     * @var $items Items list
-    * @todo вынести в админские настройки адрес отправителя
+    * 
     *-------------------------------------------------------------------------------
     */
-    public function sendMail( $items )
+    public function sendMail( $items, $user )
     {
-      if ( $this->settings->admin_email )
+      if ( count( $items ) == 0 )
+        return;
+        
+      $settings = $user->settings;
+
+      if ( $settings->send_email && $settings->admin_email )
       {
-        Mail::queue( 'emails.welcome', ['items' => $items], function( \Illuminate\Mail\Message $message )
+        Mail::queue( 'emails.welcome', ['items' => $items], function( \Illuminate\Mail\Message $message ) use( $settings )
         {
-          $message->to( $this->settings->admin_email, 'Admin' );
+          $message->to( $settings->admin_email, 'Admin' );
           $message->subject( 'Новые сообщения' );
           $message->from( 'admin@promo.monochromatic.ru', 'VK Crawler' );
         });
+        
       }
     }
 
     /**
     *---------------------------------------------------------------------------
+    * Send message to user's xmpp messenger
     *
-    *
-    *
+    * $param string $text
+    * $param \app\Models\mcUser $user
     *---------------------------------------------------------------------------
     */
-    private function send_xmpp_message( $text )
+    private function send_xmpp_message( $text, $user )
     {
-
-        //$settings = mcSettings::firstOrFail();
-
-        if ( !$this->settings->xmpp )
-          return;
-
+      
+      $settings = $user->settings;
+      
+      if ( $settings->send_xmpp && $this->settings->xmpp )
+      {
         $options = new Options( 'tcp://xmpp.ru:5222' );
         $options->setUsername( 'vk_crawler' )
         ->setPassword( 'owi78gip' );
-
+  
         $client = new Client( $options );
-
+  
         // optional connect manually
         $client->connect();
-
+  
         if ( $this->settings->xmpp )
         {
             $message = new Message;
             $message->setMessage( $text )
-            ->setTo( $this->settings->xmpp );
+            ->setTo( $settings->xmpp );
             $client->send( $message );
         }
-
-        if( $this->settings->xmpp2 )
-        {
-            $message = new Message;
-            $message->setMessage( $text )
-            ->setTo( $this->settings->xmpp2 );
-            $client->send( $message );
-        }
-
-        if( $this->settings->xmpp3 )
-        {
-            $message = new Message;
-            $message->setMessage( $text )
-            ->setTo( $this->settings->xmpp3 );
-            $client->send( $message );
-        }
-
+  
         $client->disconnect();
-
+      }
     }
 
 }
+

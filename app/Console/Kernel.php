@@ -26,7 +26,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-      $schedule->call( 'App\Http\Controllers\mcScheduleController@do_5min_schedule_job' )->name( '5-min' )->everyFiveMinutes()->withoutOverlapping();
+      $schedule->call( 'App\Http\Controllers\mcScheduleController@do_5min_schedule_job' )->name( '5-min-job' )->everyFiveMinutes();
+      $schedule->call( 'App\Http\Controllers\mcScheduleController@do_15min_schedule_job' )->name( '15-min-job' )->cron('*/15 * * * * *');
+      $schedule->call( 'App\Http\Controllers\mcScheduleController@do_hour_schedule_job' )->name( 'hour-job' )->hourly();
+      $schedule->call( 'App\Http\Controllers\mcScheduleController@do_daily_schedule_job' )->name( 'daily-job' )->daily();
         // $schedule->command('inspire')
         //          ->hourly();
     }

@@ -36,7 +36,27 @@
                                 </div>
                             </div>
                         {{ Form::close() }}
+                        <?php $oauth = new App\Http\Controllers\mcOAuth(); ?>
+                          <div class="row" style="padding: 5px">
+                            <div class="col-md-6" style="padding-bottom: 5px; padding-top:5px">
+                                
+                                <a style="padding: 6px 44px" class="btn btn-block btn-social btn-vk" href={{ $oauth->GetAuthLink( 'vkontakte' ) }}>
+                                    <span class="fa fa-vk"></span>Вконтакте
+                                </a> 
+                            </div>
+                            <div class="col-md-6" style="padding-bottom: 5px; padding-top:5px">
+                                
+                                <a style="padding: 6px 44px" class="btn btn-block btn-social btn-facebook" href={{ $oauth->GetAuthLink( 'facebook' ) }}>
+                                    <span class="fa fa-facebook"></span>Facebook
+                                </a> 
+                            </div>
+                          </div>
                     </div>
+                    
+
+
+                    
+                   
                 </div>
 
             </div>
@@ -45,4 +65,4 @@
         <!-- /Article -->
 
     </div>
-</div>	<!-- /container -->
+</div>  <!-- /container -->

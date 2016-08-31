@@ -23,8 +23,8 @@
                 <div style="font-size:10px; color: #777777; width:250px">включить отправку информации на электронную почту</div>
               </td>
               <td>
-
-                {{ Form::checkbox( 'send_email', '0' ) }}
+                {!! Form::hidden('send_email', 0) !!}
+                {{ Form::checkbox( 'send_email' ) }}
               </td>
             </tr>
             <tr>
@@ -43,8 +43,8 @@
                 <div style="font-size:10px; color: #777777; width:250px">включить отправку информации на xmpp/jabber месенджер</div>
               </td>
               <td>
-
-                {{ Form::checkbox( 'send_xmpp', '0' ) }}
+                {!! Form::hidden('send_xmpp', 0) !!}
+                {!! Form::checkbox( 'send_xmpp', null ) !!}
               </td>
             </tr>
 
@@ -82,7 +82,7 @@
                     <div style="font-size:10px; color: #777777; width:250px">Как часто будет производиться сканирование</div>
                 </td>
                 <td>
-                    {{ Form::select( 'scan_freq', [ '1' => '15 мин', '2' => '30 мин', '3' => '1 час', '4' => '24 часа'] ) }}
+                    {{ Form::select( 'scan_freq', [ '1' => '5 мин', '2' => '15 мин', '3' => '1 час', '4' => '24 часа'] ) }}
                 </td>
             </tr>
 

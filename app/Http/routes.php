@@ -67,6 +67,8 @@ Route::group( [ 'middleware' => 'sentinel.auth'], function () {
 	Route::get( 'schedule', ['as' =>'schedule', 'uses' => 'mcScheduleController@do_5min_schedule_job'] );
 });
 	Route::get( 'update', ['as' =>'update', 'uses' => 'mcUpdateController@getData'] );
+	
+	Route::get( 'oauth', ['as' => 'oauth', 'uses' => 'mcUserController@getOAuthCallback'] );
 
 
 

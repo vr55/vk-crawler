@@ -16,7 +16,7 @@
                 <div class="col-md-6 col-md-offset-3 col-sm-8 col-sm-offset-2">
                     <div class="panel panel-default">
                         <div class="panel-body">
-                            <h3 class="thin text-center">Придумайте новый пароль</h3>
+                            <h3 class="thin text-center">Новый пароль</h3>
                             <hr>
                             @include ( 'new.elements.error' )
 
